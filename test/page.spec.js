@@ -128,6 +128,21 @@ module.exports.addTests = function({testRunner, expect, headless, puppeteer, CHR
       expect(await page.evaluate(() => !!window.opener)).toBe(false);
       expect(await popup.evaluate(() => !!window.opener)).toBe(false);
     });
+    it('should have nice default execution context', async({page, server}) => {
+      const executionContext = await page.mainFrame().executionContext();
+      expect(executionContext.name()).toBe('');
+      expect(executionContext.isDefault()).toBe(true);
+    });
+    it('should throw when evaluation triggers reload', async({page, server}) => {
+      let error = null;
+      await page.evaluate(() => {
+        location.reload();
+        return new Promise(resolve => {
+          setTimeout(() => resolve(1), 0);
+        });
+      }).catch(e => error = e);
+      expect(error.message).toContain('Protocol error');
+    });
     it('should work with clicking target=_blank', async({page, server}) => {
       await page.goto(server.EMPTY_PAGE);
       await page.setContent('<a target=_blank href="/one-style.html">yo</a>');

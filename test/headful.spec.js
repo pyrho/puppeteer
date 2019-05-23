@@ -120,6 +120,7 @@ module.exports.addTests = function({testRunner, expect, puppeteer, defaultBrowse
       ]);
       await browser.close();
     });
+<<<<<<< HEAD
     it('should close browser with beforeunload page', async({server}) => {
       const browser = await puppeteer.launch(headfulOptions);
       const page = await browser.newPage();
@@ -128,6 +129,26 @@ module.exports.addTests = function({testRunner, expect, puppeteer, defaultBrowse
       // fire.
       await page.click('body');
       await browser.close();
+    it('should report content script execution contexts', async({server}) => {
+      const browserWithExtension = await puppeteer.launch(extensionOptions);
+      const page = await browserWithExtension.newPage();
+      const [extensionContext, msg] = await Promise.all([
+        waitEvent(page, 'executioncontextcreated', context => !context.isDefault()),
+        waitEvent(page, 'console'),
+        page.goto(server.EMPTY_PAGE)
+      ]);
+      expect(msg.text()).toBe('hey from the content-script');
+      expect(page.mainFrame().executionContexts().length).toBe(2);
+      expect(extensionContext.frame()).toBe(page.mainFrame());
+      expect(extensionContext.name()).toBe('Simple extension');
+      expect(await extensionContext.evaluate('thisIsTheContentScript')).toBe(true);
+
+      const [destroyedContext] = await Promise.all([
+        waitEvent(page, 'executioncontextdestroyed', context => !context.isDefault()),
+        page.reload()
+      ]);
+      expect(destroyedContext).toBe(extensionContext);
+      await browserWithExtension.close();
     });
   });
 };
